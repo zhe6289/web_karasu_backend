@@ -1,0 +1,68 @@
+# 2019-10-28  金好運日版-部署 gitlab-ci 文件
+# ------------------------------------------------------------------------------
+# 共用模板區
+# ------------------------------------------------------------------------------
+.scp_tmpl: &scp_tmpl
+  stage: deploy
+  image: dronelab/scp
+  script: dronelab
+  allow_failure: false
+  when: manual
+
+.ssh_tmpl: &ssh_tmpl
+  stage: deploy
+  image: dronelab/ssh
+  script: dronelab
+  allow_failure: false
+
+
+# ------------------------------------------------------------------------------
+# 測試機模板區
+# ------------------------------------------------------------------------------
+
+.test_server_vars:
+  variables: &test_server_vars
+    host: $TEST_HOST
+    user: $HOST_USER
+    password: $HOST_PASSWD
+    proxy_host: $JUMP_SERVER_IP
+    proxy_user: $JUMP_SERVER_USER
+    proxy_password: $JUMP_SERVER_PWD
+    command_timeout: 10m
+
+.scp_vars:
+  variables: &scp_vars
+    target: ~/
+    source: ark_api_server_nest.tar.gz
+
+# ------------------------------------------------------------------------------
+# 開始部屬區
+# ------------------------------------------------------------------------------
+cache:
+  paths:
+    - node_modules/
+
+stages:
+  - build-server_stg
+  - deploy_scp_stg
+  - deploy_ssh_stg
+
+# 測試機部屬
+build-server_stg:
+  image: igs170911/rsync-node:1.0.5
+  stage: build-server_stg
+  only:
+    - branches
+  script:
+  - cd ark-api-server-nest
+  - yarn install
+  - cd ..
+  - tar -zc ark-api-server-nest/ -f ark-api-server-nest.tar.gz
+  - mv ark-api-server-nest.tar.gz ../
+  artifacts:
+    paths:
+      - "ark-api-server-nest.tar.gz"
+    expire_in: 5 mins
+
+
+
